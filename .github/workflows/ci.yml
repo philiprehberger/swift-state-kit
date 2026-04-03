@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-latest
+    name: Swift 6.0 on Linux
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: swift-actions/setup-swift@v3
+        with:
+          swift-version: '6.0'
+          skip-verify-signature: true
+      - name: Build
+        run: swift build
+      - name: Run tests
+        run: swift test
+
+  test-macos:
+    runs-on: macos-latest
+    name: Swift on macOS (Xcode)
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build
+        run: swift build
+      - name: Run tests
+        run: swift test
