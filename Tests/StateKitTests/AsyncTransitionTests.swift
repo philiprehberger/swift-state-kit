@@ -1,19 +1,23 @@
 import Testing
 @testable import StateKit
 
+final class ExecutionTracker: @unchecked Sendable {
+    var executed = false
+}
+
 @Suite("Async Transition Tests")
 struct AsyncTransitionTests {
     @Test("Side effect executes during transition")
     func sideEffectExecutes() async throws {
-        var executed = false
+        let tracker = ExecutionTracker()
         let transitions = [
             Transition<TestState, TestEvent>(from: .idle, on: .start, to: .loading) {
-                executed = true
+                tracker.executed = true
             }
         ]
         let machine = StateMachine(initial: TestState.idle, transitions: transitions)
         try await machine.send(.start)
-        #expect(executed == true)
+        #expect(tracker.executed == true)
     }
 
     @Test("Failed side effect throws sideEffectFailed")

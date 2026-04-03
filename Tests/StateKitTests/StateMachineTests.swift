@@ -9,6 +9,10 @@ enum TestEvent: Hashable, Sendable {
     case start, succeed, fail, reset
 }
 
+final class TransitionCapture: @unchecked Sendable {
+    var value: (TestState, TestEvent, TestState)?
+}
+
 @Suite("StateMachine Tests")
 struct StateMachineTests {
     private func makeTransitions() -> [Transition<TestState, TestEvent>] {
@@ -72,13 +76,13 @@ struct StateMachineTests {
     @Test("onTransition callback is invoked")
     func transitionCallback() async throws {
         let machine = StateMachine(initial: TestState.idle, transitions: makeTransitions())
-        var captured: (TestState, TestEvent, TestState)?
+        let capture = TransitionCapture()
         await machine.onTransition { from, event, to in
-            captured = (from, event, to)
+            capture.value = (from, event, to)
         }
         try await machine.send(.start)
-        #expect(captured?.0 == .idle)
-        #expect(captured?.1 == .start)
-        #expect(captured?.2 == .loading)
+        #expect(capture.value?.0 == .idle)
+        #expect(capture.value?.1 == .start)
+        #expect(capture.value?.2 == .loading)
     }
 }

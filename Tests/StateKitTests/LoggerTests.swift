@@ -1,20 +1,24 @@
 import Testing
 @testable import StateKit
 
+final class MessageCapture: @unchecked Sendable {
+    var messages: [String] = []
+}
+
 @Suite("StateLogger Tests")
 struct LoggerTests {
     @Test("Logger receives transition messages")
     func loggerCalled() async throws {
-        var messages: [String] = []
-        let logger = StateLogger { messages.append($0) }
+        let capture = MessageCapture()
+        let logger = StateLogger { capture.messages.append($0) }
         let transitions = [
             Transition<TestState, TestEvent>(from: .idle, on: .start, to: .loading)
         ]
         let machine = StateMachine(initial: TestState.idle, transitions: transitions, logger: logger)
         try await machine.send(.start)
-        #expect(messages.count == 1)
-        #expect(messages[0].contains("idle"))
-        #expect(messages[0].contains("loading"))
+        #expect(capture.messages.count == 1)
+        #expect(capture.messages[0].contains("idle"))
+        #expect(capture.messages[0].contains("loading"))
     }
 
     @Test("No logger means no logging")
