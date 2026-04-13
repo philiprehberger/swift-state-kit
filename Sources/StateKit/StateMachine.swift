@@ -13,15 +13,15 @@ import Foundation
 /// ```
 public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable> {
     /// The current state of the machine
-    public private(set) var currentState: State
+    public internal(set) var currentState: State
 
     /// The initial state the machine was created with
     public let initialState: State
 
-    private let transitions: [Transition<State, Event>]
+    let transitions: [Transition<State, Event>]
     private let logger: StateLogger?
     private var handlers: [@Sendable (State, Event, State) -> Void] = []
-    private var stateHistory: StateHistory<State, Event>
+    var stateHistory: StateHistory<State, Event>
     private let broadcaster: StateStreamBroadcaster<State, Event>
     private var entryActions: [State: [@Sendable () async throws -> Void]] = [:]
     private var exitActions: [State: [@Sendable () async throws -> Void]] = [:]
@@ -162,6 +162,16 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
         transitions.contains { $0.matches(state: currentState, event: event) }
     }
 
+    /// The set of events valid in the current state
+    public var validEvents: Set<Event> {
+        Set(transitions.filter { $0.matches(state: currentState, event: $0.event) }.map(\.event))
+    }
+
+    /// The set of events valid for a given state
+    public func validEvents(for state: State) -> Set<Event> {
+        Set(transitions.filter { $0.from == state || $0.from == nil }.map(\.event))
+    }
+
     /// Register a callback invoked after each transition
     public func onTransition(_ handler: @escaping @Sendable (State, Event, State) -> Void) {
         handlers.append(handler)
@@ -175,6 +185,28 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
     /// Register an action to execute when exiting a state
     public func onExit(_ state: State, perform action: @escaping @Sendable () async throws -> Void) {
         exitActions[state, default: []].append(action)
+    }
+
+    /// Reset the state machine to its initial state, clearing history
+    ///
+    /// Fires exit action for the current state and entry action for the initial state.
+    @discardableResult
+    public func reset() async throws -> State {
+        let oldState = currentState
+
+        if oldState != initialState {
+            if let actions = exitActions[oldState] {
+                for action in actions { try await action() }
+            }
+            currentState = initialState
+            if let actions = entryActions[initialState] {
+                for action in actions { try await action() }
+            }
+        }
+
+        stateHistory.clear()
+        logger?.log("[StateKit] reset: \(oldState) --> \(initialState)")
+        return currentState
     }
 
     /// Add a middleware to the transition pipeline

@@ -75,6 +75,33 @@ let machine = StateMachine(
 // Logs: "[StateKit] pending --confirm--> confirmed"
 ```
 
+### Timeout Transitions
+
+```swift
+import StateKit
+
+// Auto-transition to error after 30 seconds in loading state
+await machine.addTimeout(TimeoutTransition(
+    from: .loading, after: .seconds(30), on: .timeout, to: .error
+))
+```
+
+Timeouts auto-cancel if the state changes before the duration expires.
+
+### State Persistence
+
+```swift
+import StateKit
+
+// Save state
+let snapshot = await machine.snapshot()
+let data = try JSONEncoder().encode(snapshot)
+
+// Restore state
+let decoded = try JSONDecoder().decode(StateMachineSnapshot<OrderState>.self, from: data)
+try await machine.restore(from: decoded)
+```
+
 ### Middleware
 
 ```swift
@@ -215,6 +242,13 @@ struct OrderView: View {
 | `onEnter(_:perform:)` | Register an action for when a state is entered |
 | `onExit(_:perform:)` | Register an action for when a state is exited |
 | `addMiddleware(_:)` | Add a middleware to the transition pipeline |
+| `reset()` | Reset to initial state, clearing history |
+| `validEvents` | Set of events valid in the current state |
+| `validEvents(for:)` | Set of events valid for a given state |
+| `validate()` | Check transition table for duplicates and terminal states |
+| `snapshot()` | Create a Codable snapshot of the current state |
+| `restore(from:)` | Restore state from a snapshot |
+| `addTimeout(_:)` | Register an automatic timeout transition |
 | `currentState` | The current state |
 | `initialState` | The initial state the machine was created with |
 | `history` | Array of past transitions |

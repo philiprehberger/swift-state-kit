@@ -11,6 +11,9 @@ public enum StateMachineError: Error, Sendable, CustomStringConvertible {
     /// Attempted to undo with no history available
     case noHistoryToUndo
 
+    /// Attempted to restore to an invalid state
+    case invalidState(String)
+
     public var description: String {
         switch self {
         case .invalidTransition(let from, let event):
@@ -19,6 +22,8 @@ public enum StateMachineError: Error, Sendable, CustomStringConvertible {
             return "Side effect failed: \(error)"
         case .noHistoryToUndo:
             return "No history available to undo"
+        case .invalidState(let state):
+            return "Invalid state for restore: '\(state)'"
         }
     }
 }

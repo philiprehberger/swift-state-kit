@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-04-13
+
+### Added
+- `TimeoutTransition` type for automatic state transitions after a duration
+- `addTimeout(_:)` method on `StateMachine`
+- Timeouts auto-cancel when state changes before firing
+
+## [0.11.0] - 2026-04-13
+
+### Added
+- `StateMachineSnapshot` Codable type for state persistence
+- `snapshot()` method for capturing current state
+- `restore(from:)` method for restoring state from a snapshot
+- `invalidState` error case on `StateMachineError`
+
+## [0.10.0] - 2026-04-13
+
+### Added
+- `TransitionValidation` type for checking transition tables
+- `validate()` method detecting duplicate transitions and terminal states
+
+## [0.9.0] - 2026-04-13
+
+### Added
+- `validEvents` computed property returning valid events for the current state
+- `validEvents(for:)` method for querying events valid in any state
+
+## [0.8.0] - 2026-04-13
+
+### Added
+- `reset()` method to return state machine to initial state
+- Reset clears history and fires exit/entry actions
+
 ## [0.7.0] - 2026-04-13
 
 ### Added
