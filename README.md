@@ -75,6 +75,26 @@ let machine = StateMachine(
 // Logs: "[StateKit] pending --confirm--> confirmed"
 ```
 
+### Middleware
+
+```swift
+import StateKit
+
+struct AuthMiddleware: TransitionMiddleware {
+    func intercept(
+        from: OrderState, event: OrderEvent, to: OrderState,
+        next: @Sendable () async throws -> Void
+    ) async throws {
+        guard await isAuthorized() else { throw AuthError.denied }
+        try await next()
+    }
+}
+
+await machine.addMiddleware(AuthMiddleware())
+```
+
+Middleware runs in order. Each must call `next()` to proceed or throw to reject.
+
 ### Entry and Exit Actions
 
 ```swift
@@ -194,6 +214,7 @@ struct OrderView: View {
 | `onTransition(_:)` | Register a callback for state changes |
 | `onEnter(_:perform:)` | Register an action for when a state is entered |
 | `onExit(_:perform:)` | Register an action for when a state is exited |
+| `addMiddleware(_:)` | Add a middleware to the transition pipeline |
 | `currentState` | The current state |
 | `initialState` | The initial state the machine was created with |
 | `history` | Array of past transitions |

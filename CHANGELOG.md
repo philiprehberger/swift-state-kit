@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-04-13
+
+### Added
+- `TransitionMiddleware` protocol for pluggable transition interceptors
+- `addMiddleware(_:)` method on `StateMachine`
+- Middleware chain with nested `next()` execution pattern
+
 ## [0.6.0] - 2026-04-13
 
 ### Added

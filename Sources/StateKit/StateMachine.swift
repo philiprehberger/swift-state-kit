@@ -25,6 +25,7 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
     private let broadcaster: StateStreamBroadcaster<State, Event>
     private var entryActions: [State: [@Sendable () async throws -> Void]] = [:]
     private var exitActions: [State: [@Sendable () async throws -> Void]] = [:]
+    private var middlewares: [AnyTransitionMiddleware<State, Event>] = []
 
     /// The transition history, oldest first
     public var history: [StateHistoryEntry<State, Event>] {
@@ -89,13 +90,17 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
             )
         }
 
-        if let sideEffect = transition.sideEffect {
-            do {
-                try await sideEffect()
-            } catch {
-                throw StateMachineError.sideEffectFailed(error)
-            }
-        }
+        // Run middleware chain, then side effect
+        let sideEffect = transition.sideEffect
+        let mws = middlewares
+        let from = currentState
+        let to = transition.to
+
+        try await Self.runMiddlewareChain(
+            middlewares: mws, index: 0,
+            from: from, event: event, to: to,
+            sideEffect: sideEffect
+        )
 
         let oldState = currentState
 
@@ -170,5 +175,37 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
     /// Register an action to execute when exiting a state
     public func onExit(_ state: State, perform action: @escaping @Sendable () async throws -> Void) {
         exitActions[state, default: []].append(action)
+    }
+
+    /// Add a middleware to the transition pipeline
+    public func addMiddleware<M: TransitionMiddleware>(_ middleware: M) where M.State == State, M.Event == Event {
+        middlewares.append(AnyTransitionMiddleware(middleware))
+    }
+
+    private static func runMiddlewareChain(
+        middlewares: [AnyTransitionMiddleware<State, Event>],
+        index: Int,
+        from: State,
+        event: Event,
+        to: State,
+        sideEffect: (@Sendable () async throws -> Void)?
+    ) async throws {
+        if index < middlewares.count {
+            try await middlewares[index].intercept(from: from, event: event, to: to) {
+                try await runMiddlewareChain(
+                    middlewares: middlewares, index: index + 1,
+                    from: from, event: event, to: to,
+                    sideEffect: sideEffect
+                )
+            }
+        } else {
+            if let sideEffect {
+                do {
+                    try await sideEffect()
+                } catch {
+                    throw StateMachineError.sideEffectFailed(error)
+                }
+            }
+        }
     }
 }
