@@ -75,6 +75,28 @@ let machine = StateMachine(
 // Logs: "[StateKit] pending --confirm--> confirmed"
 ```
 
+### Async State Streams
+
+```swift
+import StateKit
+
+let machine = StateMachine(initial: OrderState.pending, transitions: transitions)
+
+// Observe state changes reactively
+Task {
+    for await state in await machine.stateStream {
+        print("State changed to: \(state)")
+    }
+}
+
+// Or observe full transitions
+Task {
+    for await (from, event, to) in await machine.transitionStream {
+        print("\(from) --\(event)--> \(to)")
+    }
+}
+```
+
 ### Wildcard Transitions
 
 ```swift
@@ -156,6 +178,8 @@ struct OrderView: View {
 | `initialState` | The initial state the machine was created with |
 | `history` | Array of past transitions |
 | `canUndo` | Whether an undo operation is available |
+| `stateStream` | `AsyncStream<State>` emitting new states after transitions |
+| `transitionStream` | `AsyncStream` of `(from, event, to)` tuples |
 
 ### Transition
 

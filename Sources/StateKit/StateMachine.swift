@@ -22,6 +22,7 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
     private let logger: StateLogger?
     private var handlers: [@Sendable (State, Event, State) -> Void] = []
     private var stateHistory: StateHistory<State, Event>
+    private let broadcaster: StateStreamBroadcaster<State, Event>
 
     /// The transition history, oldest first
     public var history: [StateHistoryEntry<State, Event>] {
@@ -51,6 +52,7 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
         self.transitions = transitions
         self.logger = logger
         self.stateHistory = StateHistory(maxDepth: historyDepth)
+        self.broadcaster = StateStreamBroadcaster()
     }
 
     /// Send an event to trigger a state transition
@@ -100,6 +102,8 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
 
         logger?.log("[StateKit] \(oldState) --\(event)--> \(currentState)")
 
+        broadcaster.broadcast(from: oldState, event: event, to: currentState)
+
         for handler in handlers {
             handler(oldState, event, currentState)
         }
@@ -119,6 +123,16 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
         currentState = entry.from
         logger?.log("[StateKit] undo: \(entry.to) --> \(entry.from)")
         return currentState
+    }
+
+    /// An async stream of state values, emitting the new state after each transition
+    public var stateStream: AsyncStream<State> {
+        broadcaster.makeStateStream()
+    }
+
+    /// An async stream of full transition tuples (from, event, to)
+    public var transitionStream: AsyncStream<(from: State, event: Event, to: State)> {
+        broadcaster.makeTransitionStream()
     }
 
     /// Check if an event can be handled in the current state
