@@ -75,6 +75,24 @@ let machine = StateMachine(
 // Logs: "[StateKit] pending --confirm--> confirmed"
 ```
 
+### Entry and Exit Actions
+
+```swift
+import StateKit
+
+let machine = StateMachine(initial: OrderState.pending, transitions: transitions)
+
+await machine.onEnter(.shipped) {
+    try await sendTrackingNotification()
+}
+
+await machine.onExit(.pending) {
+    try await logOrderStart()
+}
+```
+
+Exit actions run before the state changes, entry actions run after.
+
 ### Async State Streams
 
 ```swift
@@ -174,6 +192,8 @@ struct OrderView: View {
 | `canSend(_:)` | Check if an event is valid in the current state |
 | `undo()` | Revert to the previous state (requires history) |
 | `onTransition(_:)` | Register a callback for state changes |
+| `onEnter(_:perform:)` | Register an action for when a state is entered |
+| `onExit(_:perform:)` | Register an action for when a state is exited |
 | `currentState` | The current state |
 | `initialState` | The initial state the machine was created with |
 | `history` | Array of past transitions |

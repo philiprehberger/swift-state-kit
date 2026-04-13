@@ -23,6 +23,8 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
     private var handlers: [@Sendable (State, Event, State) -> Void] = []
     private var stateHistory: StateHistory<State, Event>
     private let broadcaster: StateStreamBroadcaster<State, Event>
+    private var entryActions: [State: [@Sendable () async throws -> Void]] = [:]
+    private var exitActions: [State: [@Sendable () async throws -> Void]] = [:]
 
     /// The transition history, oldest first
     public var history: [StateHistoryEntry<State, Event>] {
@@ -96,7 +98,22 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
         }
 
         let oldState = currentState
+
+        // Execute exit actions for the current state
+        if let actions = exitActions[oldState] {
+            for action in actions {
+                try await action()
+            }
+        }
+
         currentState = transition.to
+
+        // Execute entry actions for the new state
+        if let actions = entryActions[currentState] {
+            for action in actions {
+                try await action()
+            }
+        }
 
         stateHistory.record(from: oldState, event: event, to: currentState)
 
@@ -143,5 +160,15 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
     /// Register a callback invoked after each transition
     public func onTransition(_ handler: @escaping @Sendable (State, Event, State) -> Void) {
         handlers.append(handler)
+    }
+
+    /// Register an action to execute when entering a state
+    public func onEnter(_ state: State, perform action: @escaping @Sendable () async throws -> Void) {
+        entryActions[state, default: []].append(action)
+    }
+
+    /// Register an action to execute when exiting a state
+    public func onExit(_ state: State, perform action: @escaping @Sendable () async throws -> Void) {
+        exitActions[state, default: []].append(action)
     }
 }

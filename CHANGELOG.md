@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-13
+
+### Added
+- `onEnter(_:perform:)` to register actions when entering a state
+- `onExit(_:perform:)` to register actions when exiting a state
+- Exit actions execute before state change, entry actions after
+
 ## [0.5.0] - 2026-04-13
 
 ### Added
