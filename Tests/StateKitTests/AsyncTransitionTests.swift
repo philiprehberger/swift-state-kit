@@ -11,9 +11,9 @@ struct AsyncTransitionTests {
     func sideEffectExecutes() async throws {
         let tracker = ExecutionTracker()
         let transitions = [
-            Transition<TestState, TestEvent>(from: .idle, on: .start, to: .loading) {
+            Transition<TestState, TestEvent>(from: .idle, on: .start, to: .loading, sideEffect: {
                 tracker.executed = true
-            }
+            })
         ]
         let machine = StateMachine(initial: TestState.idle, transitions: transitions)
         try await machine.send(.start)
@@ -24,9 +24,9 @@ struct AsyncTransitionTests {
     func sideEffectFailure() async {
         struct TestError: Error {}
         let transitions = [
-            Transition<TestState, TestEvent>(from: .idle, on: .start, to: .loading) {
+            Transition<TestState, TestEvent>(from: .idle, on: .start, to: .loading, sideEffect: {
                 throw TestError()
-            }
+            })
         ]
         let machine = StateMachine(initial: TestState.idle, transitions: transitions)
         do {
@@ -41,9 +41,9 @@ struct AsyncTransitionTests {
     func stateUnchangedOnFailure() async {
         struct TestError: Error {}
         let transitions = [
-            Transition<TestState, TestEvent>(from: .idle, on: .start, to: .loading) {
+            Transition<TestState, TestEvent>(from: .idle, on: .start, to: .loading, sideEffect: {
                 throw TestError()
-            }
+            })
         ]
         let machine = StateMachine(initial: TestState.idle, transitions: transitions)
         _ = try? await machine.send(.start)

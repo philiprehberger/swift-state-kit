@@ -75,6 +75,19 @@ let machine = StateMachine(
 // Logs: "[StateKit] pending --confirm--> confirmed"
 ```
 
+### Guard Conditions
+
+```swift
+import StateKit
+
+let transitions = [
+    Transition(from: .idle, on: .start, to: .loading, guard: { await isNetworkAvailable() }),
+    Transition(from: .idle, on: .start, to: .error, guard: { true })  // fallback
+]
+```
+
+When multiple transitions match the same state and event, guard conditions are evaluated in order. The first transition whose guard returns `true` is taken.
+
 ### State History and Undo
 
 ```swift
@@ -136,6 +149,7 @@ struct OrderView: View {
 | `from` | Source state |
 | `event` | Triggering event |
 | `to` | Destination state |
+| `guardCondition` | Optional async predicate that must return `true` for the transition |
 | `sideEffect` | Optional async closure executed during transition |
 
 ### ObservableStateMachine

@@ -60,7 +60,22 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
     ///           `StateMachineError.sideEffectFailed` if the side effect throws
     @discardableResult
     public func send(_ event: Event) async throws -> State {
-        guard let transition = transitions.first(where: { $0.from == currentState && $0.event == event }) else {
+        let candidates = transitions.filter { $0.from == currentState && $0.event == event }
+
+        var matched: Transition<State, Event>?
+        for candidate in candidates {
+            if let guardCondition = candidate.guardCondition {
+                if await guardCondition() {
+                    matched = candidate
+                    break
+                }
+            } else {
+                matched = candidate
+                break
+            }
+        }
+
+        guard let transition = matched else {
             throw StateMachineError.invalidTransition(
                 from: String(describing: currentState),
                 event: String(describing: event)

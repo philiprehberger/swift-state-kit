@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-13
+
+### Added
+- Guard conditions on transitions via `guard:` parameter
+- Guard evaluation with fallthrough to next matching transition
+
 ## [0.2.0] - 2026-04-13
 
 ### Added
