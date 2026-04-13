@@ -15,19 +15,42 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
     /// The current state of the machine
     public private(set) var currentState: State
 
+    /// The initial state the machine was created with
+    public let initialState: State
+
     private let transitions: [Transition<State, Event>]
     private let logger: StateLogger?
     private var handlers: [@Sendable (State, Event, State) -> Void] = []
+    private var stateHistory: StateHistory<State, Event>
+
+    /// The transition history, oldest first
+    public var history: [StateHistoryEntry<State, Event>] {
+        stateHistory.all
+    }
+
+    /// Whether an undo operation is available
+    public var canUndo: Bool {
+        stateHistory.canUndo
+    }
 
     /// Create a state machine with an initial state and transition definitions
+    ///
+    /// - Parameters:
+    ///   - initial: The starting state
+    ///   - transitions: Valid state transitions
+    ///   - logger: Optional logger for transition messages
+    ///   - historyDepth: Maximum history entries to keep. `nil` disables history, `0` means unlimited.
     public init(
         initial: State,
         transitions: [Transition<State, Event>],
-        logger: StateLogger? = nil
+        logger: StateLogger? = nil,
+        historyDepth: Int? = nil
     ) {
         self.currentState = initial
+        self.initialState = initial
         self.transitions = transitions
         self.logger = logger
+        self.stateHistory = StateHistory(maxDepth: historyDepth)
     }
 
     /// Send an event to trigger a state transition
@@ -55,12 +78,28 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
         let oldState = currentState
         currentState = transition.to
 
+        stateHistory.record(from: oldState, event: event, to: currentState)
+
         logger?.log("[StateKit] \(oldState) --\(event)--> \(currentState)")
 
         for handler in handlers {
             handler(oldState, event, currentState)
         }
 
+        return currentState
+    }
+
+    /// Undo the most recent transition, returning to the previous state
+    ///
+    /// - Returns: The restored state
+    /// - Throws: `StateMachineError.noHistoryToUndo` if there is nothing to undo
+    @discardableResult
+    public func undo() throws -> State {
+        guard let entry = stateHistory.popLast() else {
+            throw StateMachineError.noHistoryToUndo
+        }
+        currentState = entry.from
+        logger?.log("[StateKit] undo: \(entry.to) --> \(entry.from)")
         return currentState
     }
 

@@ -75,17 +75,39 @@ let machine = StateMachine(
 // Logs: "[StateKit] pending --confirm--> confirmed"
 ```
 
+### State History and Undo
+
+```swift
+import StateKit
+
+let machine = StateMachine(
+    initial: OrderState.pending,
+    transitions: transitions,
+    historyDepth: 0  // 0 = unlimited, nil = disabled
+)
+
+try await machine.send(.confirm)
+try await machine.send(.ship)
+
+// Inspect history
+let history = await machine.history  // [pending→confirmed, confirmed→shipped]
+
+// Undo last transition
+let restored = try await machine.undo()  // => .confirmed
+```
+
 ### SwiftUI Integration
 
 ```swift
 struct OrderView: View {
-    @State private var machine = ObservableStateMachine(machine: orderMachine)
+    @State private var machine: ObservableStateMachine<OrderState, OrderEvent>?
 
     var body: some View {
-        VStack {
-            Text("Status: \(machine.state)")
-            Button("Confirm") { Task { try await machine.send(.confirm) } }
-                .disabled(!await machine.canSend(.confirm))
+        if let machine {
+            VStack {
+                Text("Status: \(machine.state)")
+                Button("Confirm") { Task { try await machine.send(.confirm) } }
+            }
         }
     }
 }
@@ -97,11 +119,15 @@ struct OrderView: View {
 
 | Method | Description |
 |--------|-------------|
-| `init(initial:transitions:logger:)` | Create a state machine with initial state and transitions |
+| `init(initial:transitions:logger:historyDepth:)` | Create a state machine with initial state and transitions |
 | `send(_:)` | Send an event to trigger a transition |
 | `canSend(_:)` | Check if an event is valid in the current state |
+| `undo()` | Revert to the previous state (requires history) |
 | `onTransition(_:)` | Register a callback for state changes |
 | `currentState` | The current state |
+| `initialState` | The initial state the machine was created with |
+| `history` | Array of past transitions |
+| `canUndo` | Whether an undo operation is available |
 
 ### Transition
 
@@ -116,10 +142,14 @@ struct OrderView: View {
 
 | Property/Method | Description |
 |-----------------|-------------|
+| `init(machine:)` | Create wrapper, reading initial state from the machine |
+| `init(machine:initialState:)` | Create wrapper with explicit initial state |
 | `state` | Current state (observable) |
 | `isTransitioning` | Whether a transition is in progress |
 | `send(_:)` | Send an event |
 | `canSend(_:)` | Check if an event is valid |
+| `undo()` | Revert to the previous state |
+| `canUndo` | Whether an undo operation is available |
 
 ## Development
 
@@ -130,7 +160,21 @@ swift test
 
 ## Support
 
-[💬 Bluesky](https://bsky.app/profile/philiprehberger.bsky.social) · [🐦 X](https://x.com/philiprehberger) · [💼 LinkedIn](https://linkedin.com/in/philiprehberger) · [🌐 Website](https://philiprehberger.com) · [📦 GitHub](https://github.com/philiprehberger) · [☕ Buy Me a Coffee](https://buymeacoffee.com/philiprehberger) · [❤️ GitHub Sponsors](https://github.com/sponsors/philiprehberger)
+If you find this project useful:
+
+⭐ [Star the repo](https://github.com/philiprehberger/swift-state-kit)
+
+🐛 [Report issues](https://github.com/philiprehberger/swift-state-kit/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
+
+💡 [Suggest features](https://github.com/philiprehberger/swift-state-kit/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement)
+
+❤️ [Sponsor development](https://github.com/sponsors/philiprehberger)
+
+🌐 [All Open Source Projects](https://philiprehberger.com/open-source-packages)
+
+💻 [GitHub Profile](https://github.com/philiprehberger)
+
+🔗 [LinkedIn Profile](https://www.linkedin.com/in/philiprehberger)
 
 ## License
 

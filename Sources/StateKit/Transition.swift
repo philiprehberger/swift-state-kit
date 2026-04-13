@@ -7,7 +7,7 @@ import Foundation
 ///     try await notifyUser()
 /// }
 /// ```
-public struct Transition<State: Hashable & Sendable, Event: Hashable & Sendable>: Sendable {
+public struct Transition<State: Hashable & Sendable, Event: Hashable & Sendable>: Sendable, CustomDebugStringConvertible {
     /// The source state
     public let from: State
 
@@ -31,5 +31,9 @@ public struct Transition<State: Hashable & Sendable, Event: Hashable & Sendable>
         self.event = event
         self.to = to
         self.sideEffect = sideEffect
+    }
+
+    public var debugDescription: String {
+        "Transition(\(from) --\(event)--> \(to))"
     }
 }
