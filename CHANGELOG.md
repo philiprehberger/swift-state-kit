@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-04-13
+
+### Added
+- Hierarchical state machines via `attach(child:to:)`
+- Child machines auto-reset on parent state entry and exit
+
+## [0.17.0] - 2026-04-13
+
+### Added
+- `exportDOT()` for Graphviz DOT graph export
+- `exportMermaid()` for Mermaid stateDiagram-v2 export
+- Current state highlighting in exports
+
+## [0.16.0] - 2026-04-13
+
+### Added
+- `TransitionMetrics` for tracking transition counts and state durations
+- `enableMetrics` parameter on `StateMachine.init`
+- `metrics` property and `resetMetrics()` method
+
+## [0.15.0] - 2026-04-13
+
+### Fixed
+- Added async convenience `init(machine:)` on `ObservableStateMachine` (already shipped in v0.2.0, version reserved for alignment)
+
+## [0.14.0] - 2026-04-13
+
+### Added
+- `Equatable` conformance for `StateMachineError`
+- `isInvalidTransition` and `isSideEffectFailed` convenience properties
+
+## [0.13.0] - 2026-04-13
+
+### Added
+- `StateLogger.osLog(subsystem:category:)` using Apple's os.Logger
+- `StateLogger.osLog` convenience static property
+
 ## [0.12.0] - 2026-04-13
 
 ### Added

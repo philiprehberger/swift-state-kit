@@ -1,7 +1,7 @@
 import Foundation
 
 /// Errors thrown by the state machine
-public enum StateMachineError: Error, Sendable, CustomStringConvertible {
+public enum StateMachineError: Error, Sendable, CustomStringConvertible, Equatable {
     /// The event is not valid in the current state
     case invalidTransition(from: String, event: String)
 
@@ -24,6 +24,33 @@ public enum StateMachineError: Error, Sendable, CustomStringConvertible {
             return "No history available to undo"
         case .invalidState(let state):
             return "Invalid state for restore: '\(state)'"
+        }
+    }
+
+    /// Whether this is an invalid transition error
+    public var isInvalidTransition: Bool {
+        if case .invalidTransition = self { return true }
+        return false
+    }
+
+    /// Whether this is a side effect failure
+    public var isSideEffectFailed: Bool {
+        if case .sideEffectFailed = self { return true }
+        return false
+    }
+
+    public static func == (lhs: StateMachineError, rhs: StateMachineError) -> Bool {
+        switch (lhs, rhs) {
+        case (.invalidTransition(let lf, let le), .invalidTransition(let rf, let re)):
+            return lf == rf && le == re
+        case (.sideEffectFailed(let le), .sideEffectFailed(let re)):
+            return String(describing: le) == String(describing: re)
+        case (.noHistoryToUndo, .noHistoryToUndo):
+            return true
+        case (.invalidState(let ls), .invalidState(let rs)):
+            return ls == rs
+        default:
+            return false
         }
     }
 }

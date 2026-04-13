@@ -249,6 +249,11 @@ struct OrderView: View {
 | `snapshot()` | Create a Codable snapshot of the current state |
 | `restore(from:)` | Restore state from a snapshot |
 | `addTimeout(_:)` | Register an automatic timeout transition |
+| `metrics` | Transition metrics (if enabled) |
+| `resetMetrics()` | Reset metrics counters |
+| `exportDOT()` | Export transition graph as Graphviz DOT |
+| `exportMermaid()` | Export transition graph as Mermaid diagram |
+| `attach(child:to:)` | Attach a child state machine to a parent state |
 | `currentState` | The current state |
 | `initialState` | The initial state the machine was created with |
 | `history` | Array of past transitions |

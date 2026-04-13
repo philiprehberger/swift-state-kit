@@ -26,6 +26,7 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
     private var entryActions: [State: [@Sendable () async throws -> Void]] = [:]
     private var exitActions: [State: [@Sendable () async throws -> Void]] = [:]
     private var middlewares: [AnyTransitionMiddleware<State, Event>] = []
+    private var _metrics: TransitionMetrics<State, Event>?
 
     /// The transition history, oldest first
     public var history: [StateHistoryEntry<State, Event>] {
@@ -44,11 +45,13 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
     ///   - transitions: Valid state transitions
     ///   - logger: Optional logger for transition messages
     ///   - historyDepth: Maximum history entries to keep. `nil` disables history, `0` means unlimited.
+    ///   - enableMetrics: Whether to track transition counts and state durations
     public init(
         initial: State,
         transitions: [Transition<State, Event>],
         logger: StateLogger? = nil,
-        historyDepth: Int? = nil
+        historyDepth: Int? = nil,
+        enableMetrics: Bool = false
     ) {
         self.currentState = initial
         self.initialState = initial
@@ -56,6 +59,11 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
         self.logger = logger
         self.stateHistory = StateHistory(maxDepth: historyDepth)
         self.broadcaster = StateStreamBroadcaster()
+        if enableMetrics {
+            var m = TransitionMetrics<State, Event>()
+            m.startTiming(for: initial)
+            self._metrics = m
+        }
     }
 
     /// Send an event to trigger a state transition
@@ -121,6 +129,7 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
         }
 
         stateHistory.record(from: oldState, event: event, to: currentState)
+        _metrics?.record(from: oldState, event: event, to: currentState)
 
         logger?.log("[StateKit] \(oldState) --\(event)--> \(currentState)")
 
@@ -207,6 +216,17 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
         stateHistory.clear()
         logger?.log("[StateKit] reset: \(oldState) --> \(initialState)")
         return currentState
+    }
+
+    /// The current transition metrics, if metrics are enabled
+    public var metrics: TransitionMetrics<State, Event>? {
+        _metrics
+    }
+
+    /// Reset the metrics counters
+    public func resetMetrics() {
+        _metrics?.reset()
+        _metrics?.startTiming(for: currentState)
     }
 
     /// Add a middleware to the transition pipeline
