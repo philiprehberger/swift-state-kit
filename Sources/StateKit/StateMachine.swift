@@ -60,7 +60,10 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
     ///           `StateMachineError.sideEffectFailed` if the side effect throws
     @discardableResult
     public func send(_ event: Event) async throws -> State {
-        let candidates = transitions.filter { $0.from == currentState && $0.event == event }
+        // Specific transitions first, then wildcards
+        let specific = transitions.filter { $0.from == currentState && $0.event == event }
+        let wildcards = transitions.filter { $0.from == nil && $0.event == event }
+        let candidates = specific + wildcards
 
         var matched: Transition<State, Event>?
         for candidate in candidates {
@@ -120,7 +123,7 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
 
     /// Check if an event can be handled in the current state
     public func canSend(_ event: Event) -> Bool {
-        transitions.contains { $0.from == currentState && $0.event == event }
+        transitions.contains { $0.matches(state: currentState, event: event) }
     }
 
     /// Register a callback invoked after each transition

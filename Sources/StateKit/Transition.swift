@@ -8,8 +8,8 @@ import Foundation
 /// }
 /// ```
 public struct Transition<State: Hashable & Sendable, Event: Hashable & Sendable>: Sendable, CustomDebugStringConvertible {
-    /// The source state
-    public let from: State
+    /// The source state (`nil` means any state — a wildcard transition)
+    public let from: State?
 
     /// The triggering event
     public let event: Event
@@ -23,7 +23,7 @@ public struct Transition<State: Hashable & Sendable, Event: Hashable & Sendable>
     /// An optional async side effect executed during the transition
     public let sideEffect: (@Sendable () async throws -> Void)?
 
-    /// Create a transition
+    /// Create a transition from a specific state
     public init(
         from: State,
         on event: Event,
@@ -38,7 +38,27 @@ public struct Transition<State: Hashable & Sendable, Event: Hashable & Sendable>
         self.sideEffect = sideEffect
     }
 
+    /// Create a wildcard transition that matches from any state
+    public init(
+        fromAny event: Event,
+        to: State,
+        guard condition: (@Sendable () async -> Bool)? = nil,
+        sideEffect: (@Sendable () async throws -> Void)? = nil
+    ) {
+        self.from = nil
+        self.event = event
+        self.to = to
+        self.guardCondition = condition
+        self.sideEffect = sideEffect
+    }
+
+    /// Whether this transition matches a given state and event
+    func matches(state: State, event: Event) -> Bool {
+        self.event == event && (self.from == nil || self.from == state)
+    }
+
     public var debugDescription: String {
-        "Transition(\(from) --\(event)--> \(to))"
+        let source = from.map { "\($0)" } ?? "*"
+        return "Transition(\(source) --\(event)--> \(to))"
     }
 }

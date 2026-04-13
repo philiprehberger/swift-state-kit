@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-13
+
+### Added
+- Wildcard transitions via `Transition(fromAny:to:)` that match from any state
+- Specific transitions take priority over wildcards
+- `matches(state:event:)` internal helper on `Transition`
+
 ## [0.3.0] - 2026-04-13
 
 ### Added

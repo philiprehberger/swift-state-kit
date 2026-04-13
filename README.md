@@ -75,6 +75,21 @@ let machine = StateMachine(
 // Logs: "[StateKit] pending --confirm--> confirmed"
 ```
 
+### Wildcard Transitions
+
+```swift
+import StateKit
+
+// Matches from any state — useful for global events like reset
+let transitions = [
+    Transition(from: .idle, on: .start, to: .loading),
+    Transition(from: .loading, on: .succeed, to: .loaded),
+    Transition(fromAny: .reset, to: .idle)  // works from any state
+]
+```
+
+Specific transitions are always checked before wildcards.
+
 ### Guard Conditions
 
 ```swift
@@ -146,7 +161,9 @@ struct OrderView: View {
 
 | Property | Description |
 |----------|-------------|
-| `from` | Source state |
+| `init(from:on:to:guard:sideEffect:)` | Create a transition from a specific state |
+| `init(fromAny:to:guard:sideEffect:)` | Create a wildcard transition from any state |
+| `from` | Source state (`nil` for wildcard) |
 | `event` | Triggering event |
 | `to` | Destination state |
 | `guardCondition` | Optional async predicate that must return `true` for the transition |
