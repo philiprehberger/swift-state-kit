@@ -14,6 +14,12 @@ public enum StateMachineError: Error, Sendable, CustomStringConvertible, Equatab
     /// Attempted to restore to an invalid state
     case invalidState(String)
 
+    /// `waitFor(_:timeout:)` exceeded the requested timeout
+    case waitTimeout(state: String)
+
+    /// `waitFor(_:)` was cancelled because the state stream finished before the target state was reached
+    case waitForCancelled
+
     public var description: String {
         switch self {
         case .invalidTransition(let from, let event):
@@ -24,6 +30,10 @@ public enum StateMachineError: Error, Sendable, CustomStringConvertible, Equatab
             return "No history available to undo"
         case .invalidState(let state):
             return "Invalid state for restore: '\(state)'"
+        case .waitTimeout(let state):
+            return "Timed out waiting for state '\(state)'"
+        case .waitForCancelled:
+            return "Wait cancelled before reaching target state"
         }
     }
 
@@ -49,6 +59,10 @@ public enum StateMachineError: Error, Sendable, CustomStringConvertible, Equatab
             return true
         case (.invalidState(let ls), .invalidState(let rs)):
             return ls == rs
+        case (.waitTimeout(let ls), .waitTimeout(let rs)):
+            return ls == rs
+        case (.waitForCancelled, .waitForCancelled):
+            return true
         default:
             return false
         }

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-06-14
+
+### Added
+- `@TransitionBuilder` result builder for declarative transition tables
+- `StateMachine.init(initial:logger:historyDepth:enableMetrics:_:)` convenience initializer accepting a builder closure
+- `Transition.from(_:on:to:guard:sideEffect:)` static helper expanding a list of source states into one transition each
+- `StateMachine.waitFor(_:timeout:)` async method that suspends until the machine reaches a target state
+- `StateMachineError.waitTimeout(state:)` and `.waitForCancelled` error cases for `waitFor`
+
 ## [0.18.0] - 2026-04-13
 
 ### Added

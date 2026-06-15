@@ -56,6 +56,34 @@ let machine = StateMachine(
 let state = try await machine.send(.confirm)  // => .confirmed
 ```
 
+### Builder DSL
+
+```swift
+import StateKit
+
+let machine = StateMachine<OrderState, OrderEvent>(initial: .pending) {
+    Transition(from: .pending,   on: .confirm, to: .confirmed)
+    Transition(from: .confirmed, on: .ship,    to: .shipped)
+    Transition(from: .shipped,   on: .deliver, to: .delivered)
+
+    // Multi-source helper expands into one transition per source
+    Transition.from([.pending, .confirmed, .shipped], on: .cancel, to: .cancelled)
+}
+```
+
+The `@TransitionBuilder` result builder also supports `if`, `if let`, `if/else`, and `for` blocks inside the closure.
+
+### Waiting for a State
+
+```swift
+import StateKit
+
+// Suspend until the machine reaches .delivered (optionally with a timeout)
+let final = try await machine.waitFor(.delivered, timeout: .seconds(60))
+```
+
+Returns immediately if the machine is already in the target state. Throws `StateMachineError.waitTimeout` if the optional duration elapses first.
+
 ### Async Side Effects
 
 ```swift
@@ -237,6 +265,7 @@ struct OrderView: View {
 | `init(initial:transitions:logger:historyDepth:)` | Create a state machine with initial state and transitions |
 | `send(_:)` | Send an event to trigger a transition |
 | `canSend(_:)` | Check if an event is valid in the current state |
+| `waitFor(_:timeout:)` | Suspend until the machine reaches a target state, with optional timeout |
 | `undo()` | Revert to the previous state (requires history) |
 | `onTransition(_:)` | Register a callback for state changes |
 | `onEnter(_:perform:)` | Register an action for when a state is entered |
@@ -267,11 +296,18 @@ struct OrderView: View {
 |----------|-------------|
 | `init(from:on:to:guard:sideEffect:)` | Create a transition from a specific state |
 | `init(fromAny:to:guard:sideEffect:)` | Create a wildcard transition from any state |
+| `from(_:on:to:guard:sideEffect:)` | Static helper expanding a list of source states into one transition each |
 | `from` | Source state (`nil` for wildcard) |
 | `event` | Triggering event |
 | `to` | Destination state |
 | `guardCondition` | Optional async predicate that must return `true` for the transition |
 | `sideEffect` | Optional async closure executed during transition |
+
+### StateMachine builder init
+
+| Init | Description |
+|------|-------------|
+| `init(initial:logger:historyDepth:enableMetrics:_:)` | Convenience initializer accepting a `@TransitionBuilder` closure |
 
 ### ObservableStateMachine
 
