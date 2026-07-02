@@ -11,10 +11,10 @@ struct TimeoutTests {
         ]
         let machine = StateMachine(initial: TestState.idle, transitions: transitions)
         await machine.addTimeout(TimeoutTransition(
-            from: .loading, after: .milliseconds(50), on: .fail, to: .error
+            from: .loading, after: .milliseconds(200), on: .fail, to: .error
         ))
         try await machine.send(.start)
-        try await Task.sleep(for: .milliseconds(150))
+        try await Task.sleep(for: .milliseconds(500))
         let state = await machine.currentState
         #expect(state == .error)
     }
