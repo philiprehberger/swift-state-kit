@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-07-15
+
+### Added
+- `StateMachine.peek(_:)` async method resolving the destination state for an event (honoring guards) without mutating state, running side effects, or recording history
+- `StateMachine.send(_:)` array overload applying a sequence of events in order and returning the final state
+
 ## [0.19.0] - 2026-06-14
 
 ### Added

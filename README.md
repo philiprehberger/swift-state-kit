@@ -4,6 +4,8 @@
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fphiliprehberger%2Fswift-state-kit%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/philiprehberger/swift-state-kit)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fphiliprehberger%2Fswift-state-kit%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/philiprehberger/swift-state-kit)
 
+![StateKit](https://raw.githubusercontent.com/philiprehberger/swift-state-kit/main/package-card.webp)
+
 Type-safe async state machine with built-in logging and SwiftUI bindings
 
 ## Requirements
@@ -83,6 +85,30 @@ let final = try await machine.waitFor(.delivered, timeout: .seconds(60))
 ```
 
 Returns immediately if the machine is already in the target state. Throws `StateMachineError.waitTimeout` if the optional duration elapses first.
+
+### Previewing a Transition
+
+```swift
+import StateKit
+
+// Resolve where an event *would* lead — honoring guards — without transitioning
+if let next = await machine.peek(.confirm) {
+    print("Confirm would move to \(next)")
+}
+```
+
+`peek(_:)` runs the same matching and guard logic as `send(_:)` but never mutates state, runs side effects, or records history. Returns `nil` if no transition applies. Unlike `canSend(_:)`, it evaluates guard conditions and returns the destination state.
+
+### Sending a Sequence of Events
+
+```swift
+import StateKit
+
+// Apply several events in order, returning the final state
+let final = try await machine.send([.confirm, .ship, .deliver])  // => .delivered
+```
+
+Events are applied one at a time. If an event is invalid in the state reached so far, `send(_:)` throws and the events applied before it remain committed.
 
 ### Async Side Effects
 
@@ -264,6 +290,8 @@ struct OrderView: View {
 |--------|-------------|
 | `init(initial:transitions:logger:historyDepth:)` | Create a state machine with initial state and transitions |
 | `send(_:)` | Send an event to trigger a transition |
+| `send(_:)` (array) | Send a sequence of events in order, returning the final state |
+| `peek(_:)` | Resolve the destination state for an event (honoring guards) without transitioning |
 | `canSend(_:)` | Check if an event is valid in the current state |
 | `waitFor(_:timeout:)` | Suspend until the machine reaches a target state, with optional timeout |
 | `undo()` | Revert to the previous state (requires history) |
