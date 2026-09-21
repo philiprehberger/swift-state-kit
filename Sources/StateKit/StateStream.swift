@@ -30,6 +30,18 @@ struct StateStreamBroadcaster<State: Hashable & Sendable, Event: Hashable & Send
         }
     }
 
+    /// Emit a state value to state subscribers only
+    ///
+    /// Used for state changes that are not transitions (undo, reset, restore), which have no
+    /// honest `(from, event, to)` triple to publish on the transition stream.
+    func broadcastState(_ state: State) {
+        stateContinuations.withLock { continuations in
+            for continuation in continuations.values {
+                continuation.yield(state)
+            }
+        }
+    }
+
     func broadcast(from: State, event: Event, to: State) {
         stateContinuations.withLock { continuations in
             for continuation in continuations.values {

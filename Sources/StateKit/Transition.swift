@@ -3,10 +3,14 @@ import Foundation
 /// A valid state transition triggered by an event
 ///
 /// ```swift
-/// Transition(from: .pending, on: .confirm, to: .confirmed) {
+/// Transition(from: .pending, on: .confirm, to: .confirmed, sideEffect: {
 ///     try await notifyUser()
-/// }
+/// })
 /// ```
+///
+/// Label the closure `sideEffect:` — an unlabeled trailing closure binds to `guard:` under
+/// Swift's forward-matching rule and is resolved to `sideEffect` only by deprecated
+/// backward matching, which warns.
 public struct Transition<State: Hashable & Sendable, Event: Hashable & Sendable>: Sendable, CustomDebugStringConvertible {
     /// The source state (`nil` means any state — a wildcard transition)
     public let from: State?

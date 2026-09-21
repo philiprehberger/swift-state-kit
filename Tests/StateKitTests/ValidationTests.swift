@@ -47,4 +47,41 @@ struct ValidationTests {
         let result = await machine.validate()
         #expect(result.isValid)
     }
+
+    @Test("Detects unreachable states")
+    func detectUnreachableStates() async {
+        let transitions: [Transition<TestState, TestEvent>] = [
+            Transition(from: .idle, on: .start, to: .loading),
+            // .error can never be entered — nothing transitions to it
+            Transition(from: .error, on: .reset, to: .idle)
+        ]
+        let machine = StateMachine(initial: TestState.idle, transitions: transitions)
+        let result = await machine.validate()
+        #expect(result.unreachableStates == [.error])
+        // Unreachable states are informational, not a validity failure
+        #expect(result.isValid)
+    }
+
+    @Test("Fully connected table has no unreachable states")
+    func noUnreachableStates() async {
+        let transitions: [Transition<TestState, TestEvent>] = [
+            Transition(from: .idle, on: .start, to: .loading),
+            Transition(from: .loading, on: .succeed, to: .loaded),
+            Transition(from: .loading, on: .fail, to: .error)
+        ]
+        let machine = StateMachine(initial: TestState.idle, transitions: transitions)
+        let result = await machine.validate()
+        #expect(result.unreachableStates.isEmpty)
+    }
+
+    @Test("Wildcard targets are always reachable")
+    func wildcardTargetsReachable() async {
+        let transitions: [Transition<TestState, TestEvent>] = [
+            Transition(from: .idle, on: .start, to: .loading),
+            Transition(fromAny: .fail, to: .error)
+        ]
+        let machine = StateMachine(initial: TestState.idle, transitions: transitions)
+        let result = await machine.validate()
+        #expect(result.unreachableStates.isEmpty)
+    }
 }

@@ -61,4 +61,21 @@ struct SnapshotTests {
             #expect(error is StateMachineError)
         }
     }
+
+    @Test("Restore emits the restored state on the state stream")
+    func restoreEmitsOnStateStream() async throws {
+        let machine = StateMachine(initial: CodableState.idle, transitions: makeTransitions())
+        let stream = await machine.stateStream
+        var collected: [CodableState] = []
+
+        try await machine.send(.start)
+        try await machine.restore(from: StateMachineSnapshot(currentState: CodableState.loaded))
+
+        for await state in stream {
+            collected.append(state)
+            if collected.count == 2 { break }
+        }
+
+        #expect(collected == [.loading, .loaded])
+    }
 }

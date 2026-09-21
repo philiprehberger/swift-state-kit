@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-09-21
+
+### Added
+- `StateMachine.sendIfPossible(_:)` — performs the transition and returns the new state, or returns `nil` instead of throwing `invalidTransition` when no transition applies
+- `TransitionMetrics.eventCount(_:)` for an event's count across every source state
+- `TransitionMetrics.allTransitionCounts` and `.mostFrequentTransition`, returning the new `TransitionCount` value type
+- `TransitionValidation.unreachableStates` — states named in the transition table that cannot be reached from the initial state (informational; does not affect `isValid`)
+- DOT export now marks the initial state with a point-shaped start node
+
+### Fixed
+- `reset()`, `undo()`, and `restore(from:)` now emit the new state on `stateStream`, so stream subscribers and `waitFor(_:timeout:)` observe them — previously `waitFor` could hang through a `reset()` back to the target state. Nothing is emitted on `transitionStream`, which stays reserved for real transitions
+- `exportMermaid()` emitted `state "X" as X { note: current state }`, which is not valid `stateDiagram-v2`. The current state is now annotated with `note right of X : current state`
+- `exportMermaid()` mapped wildcard sources onto `[*]`, Mermaid's start marker, drawing wildcard transitions as initial transitions. Wildcards now leave a dedicated `anyState` pseudo-state, and `[*] --> <initial>` marks the real entry point
+- `exportMermaid()` now declares each state with a sanitized identifier and its real description as the label, so states whose descriptions contain spaces or punctuation render correctly
+- `exportDOT()` now escapes quotes and backslashes in state and event descriptions
+- `TransitionMetrics.timeInState(_:)` reported `0` for the state currently occupied until it was left; the in-progress visit is now included
+- Documented `Transition(from:on:to:sideEffect:)` with the closure labeled — an unlabeled trailing closure binds to `guard:` and resolves to `sideEffect` only through deprecated backward matching
+
+### Changed
+- `TransitionMetrics` keys transitions by a typed `Hashable` key instead of an interpolated `"\(from)--\(event)"` string, removing the possibility of two distinct transitions colliding on one key
+- `validEvents` is now expressed as `validEvents(for: currentState)` instead of relying on a self-comparison to make the event check trivially true
+
 ## [0.20.0] - 2026-07-15
 
 ### Added

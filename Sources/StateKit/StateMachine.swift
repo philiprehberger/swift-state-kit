@@ -144,6 +144,10 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
 
     /// Undo the most recent transition, returning to the previous state
     ///
+    /// The restored state is emitted on ``stateStream`` so subscribers and ``waitFor(_:timeout:)``
+    /// observe the change. Nothing is emitted on ``transitionStream`` — an undo is a state change,
+    /// not a transition. Entry and exit actions are **not** re-run.
+    ///
     /// - Returns: The restored state
     /// - Throws: `StateMachineError.noHistoryToUndo` if there is nothing to undo
     @discardableResult
@@ -151,8 +155,10 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
         guard let entry = stateHistory.popLast() else {
             throw StateMachineError.noHistoryToUndo
         }
+        let oldState = currentState
         currentState = entry.from
         logger?.log("[StateKit] undo: \(entry.to) --> \(entry.from)")
+        publishStateChange(from: oldState)
         return currentState
     }
 
@@ -172,8 +178,10 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
     }
 
     /// The set of events valid in the current state
+    ///
+    /// Guard conditions are not evaluated — use ``peek(_:)`` to resolve an event through its guard.
     public var validEvents: Set<Event> {
-        Set(transitions.filter { $0.matches(state: currentState, event: $0.event) }.map(\.event))
+        validEvents(for: currentState)
     }
 
     /// The set of events valid for a given state
@@ -198,7 +206,9 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
 
     /// Reset the state machine to its initial state, clearing history
     ///
-    /// Fires exit action for the current state and entry action for the initial state.
+    /// Fires exit action for the current state and entry action for the initial state. The
+    /// initial state is emitted on ``stateStream`` so subscribers and ``waitFor(_:timeout:)``
+    /// observe the change; nothing is emitted on ``transitionStream``.
     @discardableResult
     public func reset() async throws -> State {
         let oldState = currentState
@@ -215,6 +225,7 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
 
         stateHistory.clear()
         logger?.log("[StateKit] reset: \(oldState) --> \(initialState)")
+        publishStateChange(from: oldState)
         return currentState
     }
 
@@ -232,6 +243,14 @@ public actor StateMachine<State: Hashable & Sendable, Event: Hashable & Sendable
     /// Add a middleware to the transition pipeline
     public func addMiddleware<M: TransitionMiddleware>(_ middleware: M) where M.State == State, M.Event == Event {
         middlewares.append(AnyTransitionMiddleware(middleware))
+    }
+
+    /// Emit a state change that did not come from ``send(_:)`` — undo, reset, or restore
+    ///
+    /// No-op when the state did not actually change.
+    func publishStateChange(from oldState: State) {
+        guard currentState != oldState else { return }
+        broadcaster.broadcastState(currentState)
     }
 
     private static func runMiddlewareChain(

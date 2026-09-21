@@ -85,4 +85,17 @@ struct WaitForTests {
         // Confirm task ended (either via timeout, cancellation, or stream finish)
         _ = try? await waiter.value
     }
+
+    @Test("Resolves when reset returns to the target state")
+    func resolvesOnReset() async throws {
+        let machine = makeMachine()
+        try await machine.send(.start)
+
+        async let waiter = machine.waitFor(.idle, timeout: .seconds(2))
+        try await Task.sleep(for: .milliseconds(50))
+        try await machine.reset()
+
+        let result = try await waiter
+        #expect(result == .idle)
+    }
 }

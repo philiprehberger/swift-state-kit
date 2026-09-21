@@ -19,7 +19,7 @@ Add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/philiprehberger/swift-state-kit.git", from: "0.1.0")
+    .package(url: "https://github.com/philiprehberger/swift-state-kit.git", from: "0.21.0")
 ]
 ```
 
@@ -110,13 +110,28 @@ let final = try await machine.send([.confirm, .ship, .deliver])  // => .delivere
 
 Events are applied one at a time. If an event is invalid in the state reached so far, `send(_:)` throws and the events applied before it remain committed.
 
+### Sending Without Throwing
+
+```swift
+import StateKit
+
+// Returns nil instead of throwing when the event does not apply in the current state
+if let next = try await machine.sendIfPossible(.confirm) {
+    print("Moved to \(next)")
+}
+```
+
+`sendIfPossible(_:)` behaves exactly like `send(_:)` when a transition matches — side effects, middleware, entry/exit actions, and history all run. Only `StateMachineError.invalidTransition` is swallowed; side effect failures still throw.
+
 ### Async Side Effects
 
 ```swift
-Transition(from: .pending, on: .confirm, to: .confirmed) {
+Transition(from: .pending, on: .confirm, to: .confirmed, sideEffect: {
     try await sendConfirmationEmail()
-}
+})
 ```
+
+Label the closure `sideEffect:` — an unlabeled trailing closure binds to `guard:` instead.
 
 ### Logging
 
@@ -141,6 +156,34 @@ await machine.addTimeout(TimeoutTransition(
 ```
 
 Timeouts auto-cancel if the state changes before the duration expires.
+
+### Transition Metrics
+
+```swift
+import StateKit
+
+let machine = StateMachine(initial: OrderState.pending, transitions: transitions, enableMetrics: true)
+try await machine.send(.confirm)
+
+let metrics = await machine.metrics
+metrics?.totalTransitions                            // 1
+metrics?.transitionCount(from: .pending, on: .confirm)  // 1
+metrics?.eventCount(.confirm)                        // count across every source state
+metrics?.allTransitionCounts                         // every transition, most frequent first
+metrics?.mostFrequentTransition                      // the hottest transition, if any
+metrics?.timeInState(.confirmed)                     // includes the visit in progress
+```
+
+### Diagram Export
+
+```swift
+import StateKit
+
+print(await machine.exportMermaid())  // stateDiagram-v2, renders as-is in Markdown
+print(await machine.exportDOT())      // Graphviz DOT
+```
+
+Both exports mark the initial state and highlight the current one. State descriptions containing spaces or punctuation are sanitized for Mermaid and escaped for DOT, and wildcard transitions leave an `anyState` pseudo-state rather than Mermaid's `[*]` start marker.
 
 ### State Persistence
 
@@ -288,9 +331,10 @@ struct OrderView: View {
 
 | Method | Description |
 |--------|-------------|
-| `init(initial:transitions:logger:historyDepth:)` | Create a state machine with initial state and transitions |
+| `init(initial:transitions:logger:historyDepth:enableMetrics:)` | Create a state machine with initial state and transitions |
 | `send(_:)` | Send an event to trigger a transition |
 | `send(_:)` (array) | Send a sequence of events in order, returning the final state |
+| `sendIfPossible(_:)` | Send an event, returning `nil` instead of throwing when no transition applies |
 | `peek(_:)` | Resolve the destination state for an event (honoring guards) without transitioning |
 | `canSend(_:)` | Check if an event is valid in the current state |
 | `waitFor(_:timeout:)` | Suspend until the machine reaches a target state, with optional timeout |
@@ -302,14 +346,14 @@ struct OrderView: View {
 | `reset()` | Reset to initial state, clearing history |
 | `validEvents` | Set of events valid in the current state |
 | `validEvents(for:)` | Set of events valid for a given state |
-| `validate()` | Check transition table for duplicates and terminal states |
+| `validate()` | Check transition table for duplicates, terminal states, and unreachable states |
 | `snapshot()` | Create a Codable snapshot of the current state |
 | `restore(from:)` | Restore state from a snapshot |
 | `addTimeout(_:)` | Register an automatic timeout transition |
 | `metrics` | Transition metrics (if enabled) |
 | `resetMetrics()` | Reset metrics counters |
 | `exportDOT()` | Export transition graph as Graphviz DOT |
-| `exportMermaid()` | Export transition graph as Mermaid diagram |
+| `exportMermaid()` | Export transition graph as a Mermaid `stateDiagram-v2` |
 | `attach(child:to:)` | Attach a child state machine to a parent state |
 | `currentState` | The current state |
 | `initialState` | The initial state the machine was created with |
@@ -317,6 +361,27 @@ struct OrderView: View {
 | `canUndo` | Whether an undo operation is available |
 | `stateStream` | `AsyncStream<State>` emitting new states after transitions |
 | `transitionStream` | `AsyncStream` of `(from, event, to)` tuples |
+
+### TransitionMetrics
+
+| Property/Method | Description |
+|-----------------|-------------|
+| `totalTransitions` | Total number of transitions recorded |
+| `transitionCount(from:on:)` | Count for one specific transition |
+| `eventCount(_:)` | Count for an event across every source state |
+| `allTransitionCounts` | Every recorded transition with its count, most frequent first |
+| `mostFrequentTransition` | The most frequently taken transition, or `nil` |
+| `timeInState(_:)` | Total time in a state, including the visit in progress |
+| `reset()` | Clear all counters and timings |
+
+### TransitionValidation
+
+| Property | Description |
+|----------|-------------|
+| `duplicates` | Transitions sharing a `(from, event)` pair without guards |
+| `terminalStates` | States reachable as a target with no outgoing transitions |
+| `unreachableStates` | States in the table that cannot be reached from the initial state |
+| `isValid` | Whether the table has no duplicates |
 
 ### Transition
 
